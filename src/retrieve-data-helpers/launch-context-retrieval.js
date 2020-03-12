@@ -15,14 +15,16 @@ function retrieveLaunchContext(originalLink, accessToken, patientId, fhirBaseUrl
   const link = { ...originalLink, remappedUrl: originalLink.url };
 
   return new Promise((resolve, reject) => {
-    const headers = Object.assign({
+    const headers = {
       Accept: 'application/json',
-    }, accessToken ? {
-      Authorization: `Bearer ${accessToken.access_token}`,
-    } : {});
+      ...(accessToken ? {
+        Authorization: `Bearer ${accessToken.access_token}`,
+      } : {}),
+    };
 
     const launchParameters = {
       patient: patientId,
+      smart_messaging_origin: window.origin,
     };
 
     if (link.appContext) {

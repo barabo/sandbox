@@ -2,7 +2,7 @@ import React from "react";
 import { mount, shallow } from "enzyme";
 import { Provider } from "react-redux";
 import configureStore from "redux-mock-store";
-import 'core-js/fn/array/flat-map';
+import "core-js/es/array/flat-map";
 
 describe("Pama component", () => {
   let storeState;
@@ -31,11 +31,17 @@ describe("Pama component", () => {
 
   beforeEach(() => {
     storeState = {
-      patientState: { currentPatient: { id: 'patient-123' } },
+      patientState: { currentPatient: { id: "patient-123" } },
       pama: {
         serviceRequest: {
-          code: "1",
-          reasonCode: "2"
+          studyCoding: {
+            code: "1"
+          },
+          reasonCodings: [
+            {
+              code: "2"
+            }
+          ]
         },
         pamaRating: "appropriate"
       }
@@ -58,46 +64,45 @@ describe("Pama component", () => {
   });
 
   it("creates hook context correctly", () => {
-    const generateContext = require("../../../src/components/Pama/pama").pamaTriggerHandler.generateContext
+    const generateContext = require("../../../src/components/Pama/pama")
+      .pamaTriggerHandler.generateContext;
     const context = generateContext(storeState);
-    expect(context.selections).toEqual(['ServiceRequest/example-request-id']);
+    expect(context.selections).toEqual(["ServiceRequest/example-request-id"]);
 
     const expectedDraftOrders = {
-      resourceType: 'Bundle',
+      resourceType: "Bundle",
       entry: [
         {
           resource: {
-            resourceType: 'ServiceRequest',
-            id: 'example-request-id',
-            status: 'draft',
-            intent: 'plan',
+            resourceType: "ServiceRequest",
+            id: "example-request-id",
+            status: "draft",
+            intent: "plan",
             code: {
               coding: [
                 {
-                  system: 'http://www.ama-assn.org/go/cpt',
-                  code: '1',
-                },
-              ],
+                  code: "1"
+                }
+              ]
             },
             subject: {
-              reference: 'Patient/patient-123',
+              reference: "Patient/patient-123"
             },
             reasonCode: [
               {
                 coding: [
                   {
-                    system: 'http://snomed.info/sct',
-                    code: '2',
-                  },
-                ],
-              },
-            ],
-          },
-        },
-      ],
-    }
+                    code: "2"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    };
 
-    expect(context.draftOrders).toEqual(expectedDraftOrders);
+    expect(context.draftOrders).toMatchObject(expectedDraftOrders);
   });
 
   it("Handles onMessage payloads correctly", () => {
@@ -110,18 +115,17 @@ describe("Pama component", () => {
           code: {
             coding: [
               {
-                system: "http://www.ama-assn.org/go/cpt",
                 code: "72133"
               }
             ]
           },
+          reasonCode: [{ coding: [{ code: "123" }] }],
           extension: [
             {
               url: "http://fhir.org/argonaut/Extension/pama-rating",
               valueCodeableConcept: {
                 coding: [
                   {
-                    system: "http://fhir.org/argonaut/CodeSystem/pama-rating",
                     code: "no-criteria-apply"
                   }
                 ]
@@ -132,10 +136,76 @@ describe("Pama component", () => {
       }
     };
 
-    const onMessage = require("../../../src/components/Pama/pama").pamaTriggerHandler.onMessage
-    const dispatch = jest.fn()
-    onMessage({ data, dispatch })
-    expect(dispatch).toHaveBeenCalled()
+    const onMessage = require("../../../src/components/Pama/pama")
+      .pamaTriggerHandler.onMessage;
+    const dispatch = jest.fn();
+    onMessage({ data, dispatch });
+    expect(dispatch).toHaveBeenCalled();
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'UPDATE_IMAGING_ORDER',
+      pamaRating: 'no-criteria-apply',
+      studyCoding: {
+        code: '72133',
+      },
+      reasonCodings: [
+        {
+          code: '123',
+        },
+      ],
+    });
+  });
 
+  it("Handles applying a suggested update correctly", () => {
+    const suggestion = {
+      actions: [
+        {
+          type: "update",
+          resource: {
+            resourceType: "ServiceRequest",
+            id: "example-request-id",
+            code: {
+              coding: [
+                {
+                  code: "72133"
+                }
+              ]
+            },
+            reasonCode: [{ coding: [{ code: "123" }] }],
+            extension: [
+              {
+                url: "http://fhir.org/argonaut/Extension/pama-rating",
+                valueCodeableConcept: {
+                  coding: [
+                    {
+                      code: "no-criteria-apply"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+    };
+
+    const takeSuggestion = require("../../../src/components/Pama/pama")
+      .dispatchSuggestedUpdates;
+    const dispatch = jest.fn();
+    takeSuggestion(dispatch, suggestion);
+    expect(dispatch).toHaveBeenCalled();
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'UPDATE_IMAGING_ORDER',
+      pamaRating: 'no-criteria-apply',
+      studyCoding: {
+        code: '72133',
+      },
+      reasonCodings: [
+        {
+          code: '123',
+        },
+      ],
+    });
   });
 });

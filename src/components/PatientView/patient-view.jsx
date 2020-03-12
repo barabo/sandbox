@@ -42,16 +42,26 @@ export const PatientView = (props) => {
       <h1 className={styles['view-title']}>Patient View</h1>
       <h2>{name}</h2>
       <div className={styles['patient-data-text']}>
-        <p><strong>ID: </strong> {pid} <strong>Birthdate: </strong> {dob}</p>
+        <p>
+          <strong>ID: </strong>
+          {' '}
+          {pid}
+          {' '}
+          <strong>Birthdate: </strong>
+          {' '}
+          {dob}
+        </p>
       </div>
-      <CardList />
+      <CardList
+        takeSuggestion={() => { }}
+      />
     </div>
   );
 };
 
 PatientView.propTypes = propTypes;
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state) => ({
   isContextVisible: state.hookState.isContextVisible,
   patient: state.patientState.currentPatient,
 });
